@@ -73,6 +73,11 @@
     .atr{padding:4px 14px 8px}
     .atb{background:none;border:none;font-size:12px;font-weight:700;cursor:pointer;opacity:.5;padding:4px 0;font-family:inherit}
     .atb:hover{opacity:1}
+    .cond-wrap{display:inline-flex;align-items:center;gap:2px}
+    .cond-del{background:rgba(255,255,255,.15);border:none;color:rgba(255,255,255,.7);font-size:9px;cursor:pointer;border-radius:99px;padding:1px 4px;line-height:1;font-family:inherit}
+    .cond-del:hover{background:rgba(255,80,80,.4);color:#fff}
+    .cond-add-btn{background:rgba(255,255,255,.18);border:none;color:#fff;font-size:13px;font-weight:700;cursor:pointer;border-radius:99px;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;font-family:inherit;flex-shrink:0}
+    .cond-add-btn:hover{background:rgba(255,255,255,.3)}
     .ar{display:flex;align-items:center;gap:6px;padding:8px 14px}
     .ai{flex:1;font-size:13px;padding:6px 10px;border:1.5px solid #e0e0e0;border-radius:7px;outline:none;background:#fafafa;font-family:inherit}
     .ac2{padding:6px 12px;border-radius:7px;border:none;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
@@ -134,7 +139,7 @@ const MODES=[
   {id:"daytime", label:"🌞 日帰り",note:"独立データ",color:"#F59E0B",grad:"linear-gradient(135deg,#92400E,#D97706,#F59E0B)"},
   {id:"overnight",label:"🌙 泊まり",note:"独立データ",color:"#8B5CF6",grad:"linear-gradient(135deg,#1E1B4B,#4C1D95,#8B5CF6)"}
 ];
-const CONDS=[{id:"summer",label:"☀️ 夏",color:"#F97316"},{id:"winter",label:"❄️ 冬",color:"#0EA5E9"},{id:"rain",label:"🌧️ 雨",color:"#64748B"},{id:"baseball",label:"⚾ 野球",color:"#16A34A"},{id:"usj",label:"🎢 USJ",color:"#DC2626"},{id:"training",label:"🎓 研修",color:"#7C3AED"},{id:"store",label:"🏪 店舗応援",color:"#0891B2"},{id:"live",label:"🎤 ライブ",color:"#DB2777"}];
+const CONDS=[{id:"summer",label:"☀️ 夏",color:"#F97316"},{id:"winter",label:"❄️ 冬",color:"#0EA5E9"},{id:"rain",label:"🌧️ 雨",color:"#64748B"},{id:"baseball",label:"⚾ 野球",color:"#16A34A"},{id:"usj",label:"🎢 USJ",color:"#DC2626"},{id:"training",label:"🎓 研修",color:"#7C3AED"},{id:"store",label:"🏪 店舗応援",color:"#0891B2"},{id:"live",label:"🎤 ライブ",color:"#DB2777"},{id:"gakkai",label:"🔬 学会",color:"#0F766E"}];
 // 各モードの独立したベースカテゴリ
 const BASE={
 daytime:[
@@ -188,11 +193,12 @@ const CCATS={
   training:[{sfx:"_training",label:"🎓 研修",color:"#7C3AED",items:["スーツ","ブラウス","ストッキング","パンプス","名札","資料","ハンコ"]}],
   store:[{sfx:"_store",label:"🏪 店舗応援",color:"#0891B2",items:["筆記用具","ハサミ","電卓","名札","ハンコ"]}],
   live:[{sfx:"_live",label:"🎤 ライブ",color:"#DB2777",items:["ペンライト","チケット"]}],
+  gakkai:[{sfx:"_gakkai",label:"🔬 学会",color:"#0F766E",items:["発表資料・ポスター","名刺","学会証・参加証","筆記用具","ノートPC・タブレット","充電器・モバイルバッテリー","スーツ・フォーマルウェア","ハンコ"]}],
 };
 const EMOJIS=["📅","💄","💇🏻‍♀️","📄","✓","🧴","💈","🌙","🏨","☀️","❄️","🌧️","⚾","🎢","🎒","👗","👟","💊","🍱","📱","🔑","🎵","📷","🌸","🎀","💝","🛁","🏃","✈️","🗺️","🎡","🌈"];
 const COLORS=["#86EFAC","#F9A8D4","#C9A96E","#FCD34D","#7DD3FC","#C4B5FD","#FB923C","#38BDF8","#94A3B8","#4ADE80","#F87171","#A78BFA","#DDD6FE","#FDBA74","#6EE7B7","#FCA5A5"];
 function emptyMode(){return{checked:{},extraItems:{},deletedIds:[],customLabels:{},catOrder:{},customCats:[],deletedCatIds:[],catListOrder:[],conditions:[],openCats:{}};}
-const S={baseMode:"daytime",modes:{daytime:emptyMode(),overnight:emptyMode()},hdrOpen:false,addingCat:null,addText:"",showReset:false,showEM:false,emId:null,emText:"",showCM:false,cmId:null,cmName:"",cmEmoji:"📝",cmColor:"#86EFAC",cmNew:false,syncStatus:"loading",dragId:null,dragOv:null,dragCat:null};
+const S={baseMode:"daytime",modes:{daytime:emptyMode(),overnight:emptyMode()},customConds:[],hdrOpen:false,addingCat:null,addText:"",showReset:false,showEM:false,emId:null,emText:"",showCM:false,cmId:null,cmName:"",cmEmoji:"📝",cmColor:"#86EFAC",cmNew:false,condModal:null,syncStatus:"loading",dragId:null,dragOv:null,dragCat:null};
 function M(){return S.modes[S.baseMode];}
 let saveTimer=null,isSaving=false;
 function applyData(mode,d){
@@ -211,6 +217,8 @@ function save(){
     try{
       const m=M();
       await setDoc(REFS[S.baseMode],{checked:m.checked,extraItems:m.extraItems,deletedIds:m.deletedIds,customLabels:m.customLabels,catOrder:m.catOrder,conditions:m.conditions,openCats:m.openCats,customCats:m.customCats,deletedCatIds:m.deletedCatIds,catListOrder:m.catListOrder});
+      // save customConds globally
+      await setDoc(doc(db,"checklists","meta"),{customConds:S.customConds});
       S.syncStatus="saved";bdg();setTimeout(()=>{S.syncStatus="idle";bdg();},2000);
     }catch(e){console.error(e);S.syncStatus="error";bdg();}finally{isSaving=false;}
   },800);
@@ -219,9 +227,10 @@ function bdg(){const el=document.getElementById("sync-badge");if(!el)return;cons
 async function init(){
   const ld=document.getElementById("loading");
   try{
-    const[sd,so]=await Promise.all([getDoc(REFS.daytime),getDoc(REFS.overnight)]);
+    const[sd,so,sm]=await Promise.all([getDoc(REFS.daytime),getDoc(REFS.overnight),getDoc(doc(db,"checklists","meta"))]);
     if(sd.exists())applyData("daytime",sd.data());
     if(so.exists())applyData("overnight",so.data());
+    if(sm.exists()&&sm.data().customConds)S.customConds=sm.data().customConds;
     S.syncStatus="idle";ld.style.display="none";document.getElementById("app").style.display="block";render();
     ["daytime","overnight"].forEach(mode=>{onSnapshot(REFS[mode],snap=>{if(isSaving||!snap.exists())return;applyData(mode,snap.data());if(mode===S.baseMode)render();},e=>console.error(e));});
   }catch(e){
@@ -232,9 +241,18 @@ async function init(){
 }
 function e(s=""){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
 function lb(id,base){return M().customLabels[id]??base;}
+function allConds(){return[...CONDS,...S.customConds];}
 function condCats(){
   const m=M();const r=[];
-  m.conditions.forEach(cid=>{(CCATS[cid]||[]).forEach(t=>{const id=S.baseMode[0]+t.sfx;if(!m.deletedCatIds.includes(id))r.push({...t,id});});});
+  m.conditions.forEach(cid=>{
+    // built-in
+    (CCATS[cid]||[]).forEach(t=>{const id=S.baseMode[0]+t.sfx;if(!m.deletedCatIds.includes(id))r.push({...t,id});});
+    // custom cond categories stored in extraItems under cond id
+    const cc=S.customConds.find(c=>c.id===cid);
+    if(cc&&!m.deletedCatIds.includes("cc_"+cid)){
+      r.push({id:"cc_"+cid,label:cc.label,color:cc.color,items:[]});
+    }
+  });
   return r;
 }
 function allCats(){
@@ -318,7 +336,8 @@ function render(){
       </div>
       <div class="cond-row">
         <span class="cond-lbl">＋条件</span>
-        ${CONDS.map(c=>{const on=m.conditions.includes(c.id);return`<button class="cond-chip" data-cond="${c.id}" style="background:${on?c.color:"rgba(255,255,255,.1)"};color:${on?"#fff":"rgba(255,255,255,.65)"};border-color:${on?c.color:"transparent"}">${c.label}</button>`;}).join("")}
+        ${allConds().map(c=>{const on=m.conditions.includes(c.id);const isCustom=!!S.customConds.find(x=>x.id===c.id);return`<span class="cond-wrap"><button class="cond-chip" data-cond="${c.id}" style="background:${on?c.color:"rgba(255,255,255,.1)"};color:${on?"#fff":"rgba(255,255,255,.65)"};border-color:${on?c.color:"transparent"}">${c.label}</button>${isCustom?`<button class="cond-del" data-conddel="${c.id}" title="削除">✕</button>`:""}</span>`;}).join("")}
+        <button class="cond-add-btn" id="cond-add-btn">＋</button>
       </div>
       <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${pct===100?"#86EFAC":"rgba(255,255,255,.85)"}"></div></div>
     </div>
@@ -335,10 +354,20 @@ function render(){
   document.getElementById("ms").innerHTML=
     (S.showReset?`<div class="overlay" id="ov"><div class="modal"><div class="modal-icon">🔄</div><h2>リセットしますか？</h2><p>${mode.label}のチェックだけオフにします。<br><small style="color:#aaa">もう片方（${MODES.find(md=>md.id!==S.baseMode).label}）には影響しません</small></p><div class="modal-btns"><button class="mbtn cancel" id="mc">キャンセル</button><button class="mbtn confirm" id="mr" style="background:${mode.grad}">リセットする</button></div></div></div>`:"")
     +(S.showEM?`<div class="overlay" id="eov"><div class="em"><h3>✎ 項目を編集</h3><input class="em-inp" id="emi" value="${e(S.emText)}" placeholder="項目名を入力..."><div class="em-btns"><button class="cancel" id="emc">キャンセル</button><button class="ok" id="emo">保存する</button></div></div></div>`:"")
-    +(S.showCM?`<div class="overlay" id="cov"><div class="cm"><h3>${S.cmNew?"➕ カテゴリを追加":"✎ カテゴリを編集"}</h3><div class="cm-row"><label>カテゴリ名</label><input class="cm-inp" id="cni" value="${e(S.cmName)}" placeholder="例：持ち物、メイクなど"></div><div class="cm-row"><label>絵文字</label><div class="eg">${EMOJIS.map(em=>`<button class="eo${S.cmEmoji===em?" sel":""}" data-em="${em}">${em}</button>`).join("")}</div></div><div class="cm-row"><label>カラー</label><div class="cg">${COLORS.map(col=>`<div class="co${S.cmColor===col?" sel":""}" data-col="${col}" style="background:${col}"></div>`).join("")}</div></div><div class="cm-btns">${!S.cmNew?`<button class="del" id="cmd">削除</button>`:""}<button class="cancel" id="cmc">キャンセル</button><button class="ok" id="cmo">保存する</button></div></div></div>`:"");
+    +(S.showCM?`<div class="overlay" id="cov"><div class="cm"><h3>${S.cmNew?"➕ カテゴリを追加":"✎ カテゴリを編集"}</h3><div class="cm-row"><label>カテゴリ名</label><input class="cm-inp" id="cni" value="${e(S.cmName)}" placeholder="例：持ち物、メイクなど"></div><div class="cm-row"><label>絵文字</label><div class="eg">${EMOJIS.map(em=>`<button class="eo${S.cmEmoji===em?" sel":""}" data-em="${em}">${em}</button>`).join("")}</div></div><div class="cm-row"><label>カラー</label><div class="cg">${COLORS.map(col=>`<div class="co${S.cmColor===col?" sel":""}" data-col="${col}" style="background:${col}"></div>`).join("")}</div></div><div class="cm-btns">${!S.cmNew?`<button class="del" id="cmd">削除</button>`:""}<button class="cancel" id="cmc">キャンセル</button><button class="ok" id="cmo">保存する</button></div></div></div>`:"")
+    +(S.condModal?`<div class="overlay" id="cdov"><div class="em"><h3>🏷️ 条件を追加</h3><input class="em-inp" id="cd-name" placeholder="例：ディズニー、出張など" value="${e(S.condModal.name||"")}"><div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px">${COLORS.map(col=>`<div onclick="event.stopPropagation()" data-cdcol="${col}" style="width:26px;height:26px;border-radius:50%;background:${col};border:3px solid ${(S.condModal.color||"#86EFAC")===col?"#1a1a2e":"transparent"};cursor:pointer"></div>`).join("")}</div><div class="em-btns"><button class="cancel" id="cd-c">キャンセル</button><button class="ok" id="cd-ok">追加する</button></div></div></div>`:"");
   const q=s=>document.querySelectorAll(s);
   q("[data-mode]").forEach(el=>el.onclick=()=>setMode(el.dataset.mode));
   q("[data-cond]").forEach(el=>el.onclick=()=>toggleCond(el.dataset.cond));
+  // cond add/delete
+  const cab=document.getElementById("cond-add-btn");if(cab)cab.onclick=()=>{S.condModal={name:"",color:"#86EFAC"};render();};
+  q("[data-conddel]").forEach(el=>el.onclick=ev=>{ev.stopPropagation();const cid=el.dataset.conddel;S.customConds=S.customConds.filter(c=>c.id!==cid);const m=M();m.conditions=m.conditions.filter(id=>id!==cid);save();render();});
+  // condModal
+  const cdov=document.getElementById("cdov");if(cdov)cdov.onclick=ev=>{if(ev.target===cdov){S.condModal=null;render();}};
+  const cdok=document.getElementById("cd-ok");if(cdok)cdok.onclick=()=>{const name=(document.getElementById("cd-name")?.value||"").trim();if(!name)return;const id="cond_"+Date.now();S.customConds.push({id,label:"🏷️ "+name,color:S.condModal.color||"#86EFAC"});S.condModal=null;save();render();};
+  const cdc=document.getElementById("cd-c");if(cdc)cdc.onclick=()=>{S.condModal=null;render();};
+  const cdname=document.getElementById("cd-name");if(cdname){cdname.oninput=ev=>{if(S.condModal)S.condModal.name=ev.target.value;};cdname.onkeydown=ev=>{if(ev.key==="Enter"&&cdok)cdok.onclick();if(ev.key==="Escape"){S.condModal=null;render();}};setTimeout(()=>cdname?.focus(),50);}
+  q("[data-cdcol]").forEach(el=>el.onclick=ev=>{ev.stopPropagation();if(S.condModal){S.condModal.color=el.dataset.cdcol;render();}});
   const rb=document.getElementById("reset-btn");if(rb)rb.onclick=()=>{S.showReset=true;render();};
   const ht=document.getElementById("hdr-toggle");if(ht)ht.onclick=()=>{S.hdrOpen=!S.hdrOpen;render();};
   const mc=document.getElementById("mc");if(mc)mc.onclick=()=>{S.showReset=false;render();};
