@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>旅の準備チェックリスト</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+    body{font-family:'Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif;background:#F5F3EE;min-height:100vh;padding-bottom:80px}
+    #loading{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#F5F3EE;z-index:9999;gap:12px}
+    .ld-spinner{width:40px;height:40px;border:4px solid #e0e0e0;border-top-color:#8B5CF6;border-radius:50%;animation:spin .8s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .ld-text{font-size:14px;color:#888;font-weight:600}
+    .ld-error{font-size:13px;color:#ef4444;background:#fee2e2;padding:14px;border-radius:10px;max-width:300px;text-align:center;line-height:1.7}
+    #header{padding:10px 14px 0;position:sticky;top:0;z-index:100;box-shadow:0 6px 30px rgba(0,0,0,.22)}
+    .top-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+    .eyebrow{font-size:9px;letter-spacing:.15em;color:rgba(255,255,255,.65);font-weight:700;margin-bottom:1px}
+    h1{font-size:17px;font-weight:900;color:#fff}
+    .hdr-right{display:flex;align-items:center;gap:6px}
+    #sync-badge{font-size:9px;font-weight:700;padding:2px 7px;border-radius:99px;background:rgba(255,255,255,.13);color:rgba(255,255,255,.7);white-space:nowrap}
+    #sync-badge.saving{background:rgba(255,200,0,.25);color:#ffe066}
+    #sync-badge.saved{background:rgba(100,220,100,.22);color:#86efac}
+    #sync-badge.error{background:rgba(255,80,80,.22);color:#fca5a5}
+    #reset-btn{width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.3);color:#fff;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .2s}
+    #reset-btn:hover{transform:rotate(90deg);background:rgba(255,255,255,.25)}
+    .stats-row{display:flex;align-items:baseline;gap:3px;margin-bottom:6px;flex-wrap:wrap}
+    .stat-num{font-size:19px;font-weight:900;color:#fff}
+    .stat-sep,.stat-of{font-size:14px;color:rgba(255,255,255,.5)}
+    .stat-lbl{font-size:11px;color:rgba(255,255,255,.5);margin-left:3px}
+    .done-chip{margin-left:6px;font-size:10px;font-weight:700;background:rgba(134,239,172,.2);color:#86efac;padding:2px 7px;border-radius:99px}
+    .hdr-toggle-btn{display:flex;align-items:center;gap:4px;background:rgba(255,255,255,.12);border:none;color:rgba(255,255,255,.85);font-size:11px;font-weight:700;padding:4px 10px;border-radius:99px;cursor:pointer;font-family:inherit;margin-bottom:5px;transition:background .15s}
+    .hdr-toggle-btn:hover{background:rgba(255,255,255,.22)}
+    .hdr-toggle-btn .arr{font-size:9px;transition:transform .25s;display:inline-block}
+    .hdr-toggle-btn .arr.open{transform:rotate(180deg)}
+    .hdr-collapsible{overflow:hidden;transition:max-height .3s ease,opacity .25s ease;max-height:0;opacity:0}
+    .hdr-collapsible.open{max-height:300px;opacity:1}
+    .mode-row{display:flex;gap:6px;margin-bottom:7px;flex-wrap:wrap}
+    .mode-pill{padding:5px 14px;border-radius:99px;border:none;font-size:12px;cursor:pointer;font-family:inherit;font-weight:600;transition:all .22s}
+    .cond-row{display:flex;align-items:center;gap:4px;flex-wrap:wrap;padding-bottom:8px}
+    .cond-lbl{font-size:9px;color:rgba(255,255,255,.45);font-weight:600;margin-right:2px}
+    .cond-chip{padding:3px 8px;border-radius:99px;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit;border:1.5px solid transparent;transition:all .18s}
+    .bar-track{height:3px;background:rgba(255,255,255,.15)}
+    .bar-fill{height:100%;transition:width .5s ease,background .3s}
+    #main{padding:12px 10px;max-width:600px;margin:0 auto}
+    .card{background:#fff;border-radius:13px;margin-bottom:10px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.065)}
+    .cat-head{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-left:4px solid;cursor:pointer;user-select:none}
+    .cat-head:hover{background:#fafafa}
+    .cat-l,.cat-r{display:flex;align-items:center;gap:5px}
+    .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+    .cat-lbl{font-size:13px;font-weight:800;color:#1a1a2e}
+    .badge{font-size:10px;font-weight:700;padding:2px 6px;border-radius:99px}
+    .all-btn{font-size:10px;background:transparent;border:1px solid #e0e0e0;border-radius:5px;padding:2px 6px;cursor:pointer;color:#999;font-weight:600;font-family:inherit}
+    .all-btn:hover{background:#f0f0f0}
+    .cat-eb{font-size:11px;background:transparent;border:none;color:#ccc;cursor:pointer;padding:2px 3px;border-radius:5px}
+    .cat-eb:hover{background:#f0f0f0;color:#555}
+    .cat-eb:disabled{opacity:.2;pointer-events:none}
+    .chev{font-size:9px;color:#ccc}
+    ul.item-list{list-style:none;border-top:1px solid #f0f0f0;padding:2px 0 4px}
+    li.item{display:flex;align-items:center;gap:8px;padding:8px 12px;border-top:2px solid transparent}
+    li.item:hover{background:#f8f8f6}
+    li.item.drag-over{background:rgba(139,92,246,.07)}
+    .dh{flex-shrink:0;font-size:13px;color:#ccc;cursor:grab;opacity:0;padding:0 1px}
+    li.item:hover .dh{opacity:1}
+    .cb{width:21px;height:21px;border-radius:6px;border:2px solid #ddd;flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;background:transparent}
+    .il{font-size:13px;color:#2d2d2d;flex:1;line-height:1.4;cursor:pointer;word-break:break-all}
+    .il.done{opacity:.35;text-decoration:line-through}
+    .ag{display:flex;align-items:center;gap:1px;opacity:0;flex-shrink:0}
+    li.item:hover .ag{opacity:1}
+    .ib{width:24px;height:24px;border-radius:6px;border:none;background:transparent;color:#bbb;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;font-family:inherit;flex-shrink:0}
+    .ib:hover{background:#f0f0f0;color:#555}
+    .ib.del:hover{background:#fee2e2;color:#ef4444}
+    .ib:disabled{opacity:.2;pointer-events:none}
+    .atr{padding:4px 14px 8px}
+    .atb{background:none;border:none;font-size:12px;font-weight:700;cursor:pointer;opacity:.5;padding:4px 0;font-family:inherit}
+    .atb:hover{opacity:1}
+    .ar{display:flex;align-items:center;gap:6px;padding:8px 14px}
+    .ai{flex:1;font-size:13px;padding:6px 10px;border:1.5px solid #e0e0e0;border-radius:7px;outline:none;background:#fafafa;font-family:inherit}
+    .ac2{padding:6px 12px;border-radius:7px;border:none;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
+    .ax{padding:6px 9px;border-radius:7px;border:1px solid #e0e0e0;background:#f5f5f5;font-size:11px;cursor:pointer;color:#999;font-family:inherit}
+    .add-cat-card{background:#fff;border-radius:13px;margin-bottom:10px;border:2px dashed #e0e0e0;display:flex;align-items:center;justify-content:center;padding:14px;cursor:pointer}
+    .add-cat-card:hover{border-color:#8B5CF6}
+    .add-cat-btn{background:none;border:none;font-size:13px;font-weight:700;color:#8B5CF6;cursor:pointer;font-family:inherit;opacity:.7}
+    .overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:999;backdrop-filter:blur(6px)}
+    .modal{background:#fff;border-radius:20px;padding:28px 22px;max-width:300px;width:90%;text-align:center;box-shadow:0 24px 60px rgba(0,0,0,.2)}
+    .modal-icon{font-size:36px;margin-bottom:10px}
+    .modal h2{font-size:17px;font-weight:900;color:#1a1a2e;margin-bottom:8px}
+    .modal p{font-size:13px;color:#777;line-height:1.65;margin-bottom:20px}
+    .modal-btns{display:flex;gap:8px}
+    .mbtn{flex:1;padding:10px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+    .mbtn.cancel{border:2px solid #ebebeb;background:#f5f5f5;color:#666}
+    .mbtn.confirm{border:none;color:#fff}
+    .em{background:#fff;border-radius:20px;padding:24px 20px;max-width:320px;width:92%;box-shadow:0 24px 60px rgba(0,0,0,.2)}
+    .em h3{font-size:16px;font-weight:900;color:#1a1a2e;margin-bottom:14px;text-align:center}
+    .em-inp{width:100%;font-size:15px;padding:10px 12px;border:1.5px solid #a5b4fc;border-radius:9px;outline:none;font-family:inherit;margin-bottom:12px}
+    .em-btns{display:flex;gap:8px}
+    .em-btns .cancel{flex:1;padding:11px;border-radius:9px;border:2px solid #ebebeb;background:#f5f5f5;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;color:#666}
+    .em-btns .ok{flex:1;padding:11px;border-radius:9px;border:none;background:linear-gradient(135deg,#4C1D95,#8B5CF6);color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+    .cm{background:#fff;border-radius:20px;padding:24px 20px;max-width:340px;width:92%;box-shadow:0 24px 60px rgba(0,0,0,.2);max-height:90vh;overflow-y:auto}
+    .cm h3{font-size:16px;font-weight:900;color:#1a1a2e;margin-bottom:16px;text-align:center}
+    .cm-row{margin-bottom:12px}
+    .cm-row label{display:block;font-size:11px;font-weight:700;color:#888;margin-bottom:4px}
+    .cm-inp{width:100%;font-size:15px;padding:10px 12px;border:1.5px solid #e0e0e0;border-radius:9px;outline:none;font-family:inherit}
+    .cm-inp:focus{border-color:#a5b4fc}
+    .eg{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;margin-top:6px}
+    .eo{font-size:20px;padding:4px;border-radius:7px;border:2px solid transparent;cursor:pointer;text-align:center;background:none}
+    .eo:hover{background:#f0f0f0}
+    .eo.sel{border-color:#8B5CF6;background:#f3f0ff}
+    .cg{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+    .co{width:28px;height:28px;border-radius:50%;border:3px solid transparent;cursor:pointer;transition:all .12s}
+    .co.sel{border-color:#1a1a2e;transform:scale(1.15)}
+    .cm-btns{display:flex;gap:8px;margin-top:16px}
+    .cm-btns .cancel{flex:1;padding:10px;border-radius:9px;border:2px solid #ebebeb;background:#f5f5f5;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;color:#666}
+    .cm-btns .ok{flex:1;padding:10px;border-radius:9px;border:none;background:linear-gradient(135deg,#4C1D95,#8B5CF6);color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+    .cm-btns .del{padding:10px 14px;border-radius:9px;border:none;background:#fee2e2;color:#ef4444;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+    @media(hover:none){
+      .ag{opacity:1!important}
+      .dh{display:none}
+      .ib{width:32px;height:32px;font-size:15px}
+      .cat-eb{opacity:1!important;color:#aaa!important}
+    }
+  </style>
+</head>
+<body>
+<div id="loading"><div class="ld-spinner"></div><div class="ld-text">データを読み込み中…</div></div>
+<div id="app" style="display:none"><div id="header"></div><div id="main"></div><div id="ms"></div></div>
+<script type="module">
+import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import{getFirestore,doc,getDoc,setDoc,onSnapshot}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+const fbApp=initializeApp({apiKey:"AIzaSyBr4AQAqzs7QOFGQ12wqn_DfYJv-ZpzbQE",authDomain:"travel-checklist-1786b.firebaseapp.com",projectId:"travel-checklist-1786b",storageBucket:"travel-checklist-1786b.firebasestorage.app",messagingSenderId:"648306852606",appId:"1:648306852606:web:cee4db9327f201920fdbaf"});
+const db=getFirestore(fbApp);
+// ★ 日帰り・泊まりは完全に別ドキュメント — 互いに影響しない
+const REFS={daytime:doc(db,"checklists","daytime"),overnight:doc(db,"checklists","overnight")};
+const MODES=[
+  {id:"daytime", label:"🌞 日帰り",note:"独立データ",color:"#F59E0B",grad:"linear-gradient(135deg,#92400E,#D97706,#F59E0B)"},
+  {id:"overnight",label:"🌙 泊まり",note:"独立データ",color:"#8B5CF6",grad:"linear-gradient(135deg,#1E1B4B,#4C1D95,#8B5CF6)"}
+];
+const CONDS=[{id:"summer",label:"☀️ 夏",color:"#F97316"},{id:"winter",label:"❄️ 冬",color:"#0EA5E9"},{id:"rain",label:"🌧️ 雨",color:"#64748B"},{id:"baseball",label:"⚾ 野球",color:"#16A34A"},{id:"usj",label:"🎢 USJ",color:"#DC2626"},{id:"training",label:"🎓 研修",color:"#7C3AED"},{id:"store",label:"🏪 店舗応援",color:"#0891B2"},{id:"live",label:"🎤 ライブ",color:"#DB2777"}];
+// 各モードの独立したベースカテゴリ
+const BASE={
+daytime:[
+  {id:"d_preday",label:"📅 前日準備",color:"#86EFAC",items:["ホワイトニング🦷をする","毛を剃る","爪を切る","ネイル💅する","行きたい場所・順序を考える","現金を用意する","アクセサリー💍を付ける","野菜生活🍅を飲む","コンタクトをする"]},
+  {id:"d_makeup",label:"💄 メイク",color:"#F9A8D4",items:["化粧水","下地","ファンデーション","パウダー","アイブロウペンシル・パウダー","アイブロウコート","アイシャドウベース","アイシャドウ","保湿リップ","リップ","キープミスト"]},
+  {id:"d_hair",label:"💇🏻‍♀️ ヘアセット",color:"#C9A96E",items:["髪をとかす","アイロン","ワックス"]},
+  {id:"d_docs",label:"📄 書類・貴重品",color:"#FCD34D",items:["お財布👛","現金・交通費","クレジットカード","交通チケット","パークのチケット"]},
+  {id:"d_bag",label:"✓ 持ち物",color:"#7DD3FC",items:["衣類👚","肌着","ハンカチ","ティッシュ","ウェットティッシュ","生理用品","常備薬💊","絆創膏","マスク","ゴミ袋","携帯電話📱","携帯電話の充電器","モバイルバッテリー","日焼け止めクリーム","香水","コスメ💄","アクセサリー💍","メガネ👓","コンタクトレンズ","フロス","疲労回復バーム","毛剃り","日傘🌂","本📚","手提げカバン","ヨギボー","家の鍵","野菜生活","小さい水筒"]},
+  {id:"d_skin",label:"🧴 スキンケア",color:"#C4B5FD",items:["洗顔","化粧水","クレンジング","歯ブラシ・歯磨き粉","歯型🦷"]},
+  {id:"d_hairtools",label:"💈 ヘアケア",color:"#F9A8D4",items:["ワックス","ヘアミルク","ヘアアイロン"]},
+],
+overnight:[
+  {id:"o_advance",label:"📋 事前準備（数日〜1週間前）",color:"#6EE7B7",items:[
+    "航空券・新幹線の予約確認（座席指定含む）",
+    "宿泊施設の予約確認（チェックイン時間の把握）",
+    "レンタカー・シェアサイクルの予約確認",
+    "交通チケット・パスの購入",
+    "滞在日数分のコーディネートを考える",
+    "美容院・ネイルなど身だしなみのメンテナンス",
+    "新しい靴の履き慣らし（必要なら）",
+    "コンタクトレンズ・常備薬の残量チェック",
+    "トラベルサイズ用品の購入（シャンプー・化粧水など）",
+  ]},
+  {id:"o_preday",label:"📅 前日準備",color:"#86EFAC",items:[
+    "すべての荷物をバッグに詰める",
+    "スマホ・モバイルバッテリーをフル充電",
+    "洗濯を済ませて干しておく",
+    "戸締まり・火の元の最終確認",
+    "翌朝の服装を枕元に出しておく",
+    "空港・駅までのルート・始発を再確認",
+    "天気予報のチェック（傘が必要か判断）",
+    "ホワイトニング🦷をする","毛を剃る","爪を切る","ネイル💅する",
+    "現金を用意する","アクセサリー💍を付ける","野菜生活🍅を飲む","コンタクトをする",
+  ]},
+  {id:"o_makeup",label:"💄 メイク",color:"#F9A8D4",items:["化粧水","下地","ファンデーション","パウダー","アイブロウペンシル・パウダー","アイブロウコート","アイシャドウベース","アイシャドウ","保湿リップ","リップ","キープミスト"]},
+  {id:"o_hair",label:"💇🏻‍♀️ ヘアセット",color:"#C9A96E",items:["髪をとかす","アイロン","ワックス"]},
+  {id:"o_docs",label:"📄 書類・貴重品",color:"#FCD34D",items:["お財布👛","現金・交通費","クレジットカード","交通チケット","パークのチケット","パスポート","旅行保険証","ホテル予約確認書","身分証明書（免許証）"]},
+  {id:"o_bag",label:"✓ 持ち物",color:"#7DD3FC",items:["衣類👚","肌着","ハンカチ","ティッシュ","ウェットティッシュ","生理用品","常備薬💊","絆創膏","マスク","ゴミ袋","携帯電話📱","携帯電話の充電器","モバイルバッテリー","日焼け止めクリーム","香水","コスメ💄","アクセサリー💍","メガネ👓","コンタクトレンズ","フロス","疲労回復バーム","毛剃り","日傘🌂","本📚","手提げカバン","ヨギボー","家の鍵","野菜生活","小さい水筒"]},
+  {id:"o_skin",label:"🧴 スキンケア",color:"#C4B5FD",items:["洗顔","化粧水","クレンジング","歯ブラシ・歯磨き粉","歯型🦷"]},
+  {id:"o_hairtools",label:"💈 ヘアケア",color:"#F9A8D4",items:["ワックス","ヘアミルク","ヘアアイロン","ドライヤー"]},
+  {id:"o_stay",label:"🌙 泊まり専用",color:"#A78BFA",items:["パジャマ","着替え（日数分＋予備）","下着・靴下（日数分＋予備）","シャンプー・コンディショナー","ボディソープ","タオル（必要な場合）","スリッパ・サンダル","SIMカード・WiFiルーター","変換プラグ・アダプター"]},
+  {id:"o_hotel",label:"🏨 ホテル",color:"#DDD6FE",items:["イヤホン","ネックピロー","アイマスク・耳栓","ジップロック袋（各サイズ）","南京錠（荷物用）"]},
+]};
+// 条件カテゴリ（モード別に独立したIDを持つ）
+const CCATS={
+  summer:[{sfx:"_summer",label:"☀️ 夏対策",color:"#FB923C",items:["携帯扇風機","アームカバー","冷却スプレー","塩分タブレット・経口補水液","汗拭きシート","サングラス","帽子・日よけ"]}],
+  winter:[{sfx:"_winter",label:"❄️ 冬対策",color:"#38BDF8",items:["保湿剤","マフラー・ストール","手袋","カイロ","ヒートテック・厚手インナー","ブーツ・防寒靴","ニット帽"]}],
+  rain:[{sfx:"_rain",label:"🌧️ 雨対策",color:"#94A3B8",items:["レインブーツ👢","折りたたみ傘・レインコート","防水スプレー","替えの靴下","ビニール袋（濡れ物入れ）"]}],
+  baseball:[{sfx:"_baseball",label:"⚾ 野球観戦",color:"#4ADE80",items:["新庄タオル","チームユニフォーム・グッズ","双眼鏡","応援グッズ（メガホンなど）","ブランケット（夜は冷える）","軽食・飲み物（または現金）","観戦チケット"]}],
+  usj:[{sfx:"_usj",label:"🎢 USJ",color:"#F87171",items:["USJチケット・エクスプレスパス","ロッカー用小銭（100円）","レインポンチョ（ウォーターライド用）","スニーカー（歩きやすい靴）","リュック or ウエストポーチ","モバイルバッテリー（充電必須）","ユニバアプリ（待ち時間確認）","グッズ購入予算"]}],
+  training:[{sfx:"_training",label:"🎓 研修",color:"#7C3AED",items:["スーツ","ブラウス","ストッキング","パンプス","名札","資料","ハンコ"]}],
+  store:[{sfx:"_store",label:"🏪 店舗応援",color:"#0891B2",items:["筆記用具","ハサミ","電卓","名札","ハンコ"]}],
+  live:[{sfx:"_live",label:"🎤 ライブ",color:"#DB2777",items:["ペンライト","チケット"]}],
+};
+const EMOJIS=["📅","💄","💇🏻‍♀️","📄","✓","🧴","💈","🌙","🏨","☀️","❄️","🌧️","⚾","🎢","🎒","👗","👟","💊","🍱","📱","🔑","🎵","📷","🌸","🎀","💝","🛁","🏃","✈️","🗺️","🎡","🌈"];
+const COLORS=["#86EFAC","#F9A8D4","#C9A96E","#FCD34D","#7DD3FC","#C4B5FD","#FB923C","#38BDF8","#94A3B8","#4ADE80","#F87171","#A78BFA","#DDD6FE","#FDBA74","#6EE7B7","#FCA5A5"];
+function emptyMode(){return{checked:{},extraItems:{},deletedIds:[],customLabels:{},catOrder:{},customCats:[],deletedCatIds:[],catListOrder:[],conditions:[],openCats:{}};}
+const S={baseMode:"daytime",modes:{daytime:emptyMode(),overnight:emptyMode()},hdrOpen:false,addingCat:null,addText:"",showReset:false,showEM:false,emId:null,emText:"",showCM:false,cmId:null,cmName:"",cmEmoji:"📝",cmColor:"#86EFAC",cmNew:false,syncStatus:"loading",dragId:null,dragOv:null,dragCat:null};
+function M(){return S.modes[S.baseMode];}
+let saveTimer=null,isSaving=false;
+function applyData(mode,d){
+  const m=S.modes[mode];
+  m.checked=d.checked||{};m.extraItems=d.extraItems||{};m.deletedIds=d.deletedIds||[];
+  m.customLabels=d.customLabels||{};m.catOrder=d.catOrder||{};m.customCats=d.customCats||[];
+  m.deletedCatIds=d.deletedCatIds||[];m.catListOrder=d.catListOrder||[];m.conditions=d.conditions||[];
+  const allBase=[...BASE[mode],...Object.entries(CCATS).flatMap(([cid,arr])=>arr.map(c=>({...c,id:mode[0]+c.sfx})))];
+  allBase.forEach(c=>{if(m.openCats[c.id]===undefined)m.openCats[c.id]=true;});
+  if(d.openCats)Object.keys(d.openCats).forEach(k=>m.openCats[k]=d.openCats[k]);
+}
+function save(){
+  S.syncStatus="saving";bdg();clearTimeout(saveTimer);
+  saveTimer=setTimeout(async()=>{
+    isSaving=true;
+    try{
+      const m=M();
+      await setDoc(REFS[S.baseMode],{checked:m.checked,extraItems:m.extraItems,deletedIds:m.deletedIds,customLabels:m.customLabels,catOrder:m.catOrder,conditions:m.conditions,openCats:m.openCats,customCats:m.customCats,deletedCatIds:m.deletedCatIds,catListOrder:m.catListOrder});
+      S.syncStatus="saved";bdg();setTimeout(()=>{S.syncStatus="idle";bdg();},2000);
+    }catch(e){console.error(e);S.syncStatus="error";bdg();}finally{isSaving=false;}
+  },800);
+}
+function bdg(){const el=document.getElementById("sync-badge");if(!el)return;const mp={loading:["⏳ 読込中",""],saving:["🔄 同期中","saving"],saved:["✅ 同期済","saved"],error:["❌ エラー","error"],idle:["☁️ 同期済",""]};const[t,c]=mp[S.syncStatus]||["",""];el.textContent=t;el.className=c;}
+async function init(){
+  const ld=document.getElementById("loading");
+  try{
+    const[sd,so]=await Promise.all([getDoc(REFS.daytime),getDoc(REFS.overnight)]);
+    if(sd.exists())applyData("daytime",sd.data());
+    if(so.exists())applyData("overnight",so.data());
+    S.syncStatus="idle";ld.style.display="none";document.getElementById("app").style.display="block";render();
+    ["daytime","overnight"].forEach(mode=>{onSnapshot(REFS[mode],snap=>{if(isSaving||!snap.exists())return;applyData(mode,snap.data());if(mode===S.baseMode)render();},e=>console.error(e));});
+  }catch(e){
+    console.error(e);S.syncStatus="error";
+    ld.innerHTML='<div class="ld-error">⚠️ Firebaseへの接続に失敗しました。<br><br>① Firestore Databaseを作成する<br>② ルールの有効期限を確認する</div><button id="ob" style="padding:10px 24px;border-radius:9px;border:none;background:#8B5CF6;color:#fff;font-size:14px;font-weight:700;cursor:pointer;margin-top:10px">オフラインで使う</button>';
+    document.getElementById("ob").onclick=()=>{ld.style.display="none";document.getElementById("app").style.display="block";render();};
+  }
+}
+function e(s=""){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+function lb(id,base){return M().customLabels[id]??base;}
+function condCats(){
+  const m=M();const r=[];
+  m.conditions.forEach(cid=>{(CCATS[cid]||[]).forEach(t=>{const id=S.baseMode[0]+t.sfx;if(!m.deletedCatIds.includes(id))r.push({...t,id});});});
+  return r;
+}
+function allCats(){
+  const m=M();
+  const base=BASE[S.baseMode].filter(c=>!m.deletedCatIds.includes(c.id));
+  const cond=condCats();
+  const custom=m.customCats.filter(c=>!m.deletedCatIds.includes(c.id));
+  let all=[...base,...cond,...custom];
+  if(m.catListOrder.length){const om=Object.fromEntries(m.catListOrder.map((id,i)=>[id,i]));all.sort((a,b)=>(om[a.id]??9999)-(om[b.id]??9999));}
+  return all.map(c=>({...c,label:m.customLabels["_cat_"+c.id]??c.label,color:m.customLabels["_col_"+c.id]??c.color,isCustom:!!m.customCats.find(x=>x.id===c.id)}));
+}
+function visCats(){
+  const m=M();
+  return allCats().map(cat=>{
+    const raw=(cat.items||[]).map((lb2,i)=>({id:cat.id+"_i"+i,label:typeof lb2==="string"?lb2:lb2.label})).filter(it=>!m.deletedIds.includes(it.id));
+    const cust=(m.extraItems[cat.id]||[]).filter(i=>!m.deletedIds.includes(i.id));
+    let items=[...raw,...cust];
+    const ord=m.catOrder[cat.id];
+    if(ord){const om=Object.fromEntries(ord.map((id,i)=>[id,i]));items.sort((a,b)=>(om[a.id]??9999)-(om[b.id]??9999));}
+    if(!items.length&&!cat.isCustom)return null;
+    return{...cat,items};
+  }).filter(Boolean);
+}
+function toggle(id){M().checked[id]=!M().checked[id];save();render();}
+function toggleCat(id){M().openCats[id]=!M().openCats[id];save();render();}
+function setMode(mode){S.baseMode=mode;S.addingCat=null;render();}
+function toggleCond(id){const m=M();const i=m.conditions.indexOf(id);i>=0?m.conditions.splice(i,1):m.conditions.push(id);save();render();}
+function chkAll(catId,items){const on=items.every(i=>M().checked[i.id]);items.forEach(i=>M().checked[i.id]=!on);save();render();}
+function addItem(catId){const label=S.addText.trim();if(!label){S.addingCat=null;render();return;}const id="c"+Date.now();const m=M();m.extraItems[catId]=[...(m.extraItems[catId]||[]),{id,label}];m.checked[id]=false;S.addText="";S.addingCat=null;save();render();}
+function delItem(id,catId){const m=M();if(m.extraItems[catId])m.extraItems[catId]=m.extraItems[catId].filter(i=>i.id!==id);if(!m.deletedIds.includes(id))m.deletedIds.push(id);delete m.checked[id];save();render();}
+function openEM(id,label){S.showEM=true;S.emId=id;S.emText=label;render();}
+function commitEM(){const label=S.emText.trim();if(label&&S.emId){M().customLabels[S.emId]=label;const ei=M().extraItems;for(const cid in ei)ei[cid]=ei[cid].map(i=>i.id===S.emId?{...i,label}:i);}S.showEM=false;S.emId=null;S.emText="";save();render();}
+function moveItem(catId,items,from,to){if(to<0||to>=items.length)return;const ids=items.map(i=>i.id);const[mv]=ids.splice(from,1);ids.splice(to,0,mv);M().catOrder[catId]=ids;save();render();}
+function moveCat(catId,dir){const cats=allCats();const ids=cats.map(c=>c.id);const i=ids.indexOf(catId);const ni=i+dir;if(ni<0||ni>=ids.length)return;const[mv]=ids.splice(i,1);ids.splice(ni,0,mv);M().catListOrder=ids;save();render();}
+function openCM(catId){
+  const isNew=!catId;const cat=catId?allCats().find(c=>c.id===catId):null;
+  S.showCM=true;S.cmNew=isNew;S.cmId=catId||null;
+  const raw=cat?.label??"";
+  const em=raw.match(/^(\p{Emoji_Presentation}|\p{Emoji}\uFE0F)/u);
+  S.cmEmoji=em?em[0]:"📝";S.cmName=raw.replace(/^(\p{Emoji_Presentation}|\p{Emoji}\uFE0F)\s*/u,"").trim();S.cmColor=cat?.color??"#86EFAC";
+  render();
+}
+function commitCM(){const name=S.cmName.trim();if(!name)return;const fullLabel=S.cmEmoji+" "+name;const m=M();if(S.cmNew){const id="cat_"+Date.now();m.customCats.push({id,label:fullLabel,color:S.cmColor,items:[]});m.openCats[id]=true;}else{m.customLabels["_cat_"+S.cmId]=fullLabel;m.customLabels["_col_"+S.cmId]=S.cmColor;}S.showCM=false;save();render();}
+function delCat(catId){const m=M();if(!m.deletedCatIds.includes(catId))m.deletedCatIds.push(catId);m.customCats=m.customCats.filter(c=>c.id!==catId);S.showCM=false;save();render();}
+function resetAll(){const c={};visCats().forEach(cat=>cat.items.forEach(i=>c[i.id]=false));M().checked=c;S.showReset=false;save();render();}
+function render(){
+  const vc=visCats();const m=M();
+  const allIds=vc.flatMap(c=>c.items.map(i=>i.id));
+  const total=allIds.length,done=allIds.filter(id=>m.checked[id]).length;
+  const pct=total===0?0:Math.round(done/total*100);
+  const mode=MODES.find(md=>md.id===S.baseMode)||MODES[0];
+  const R=26,C=(2*Math.PI*R).toFixed(2);
+  document.getElementById("header").style.background=mode.grad;
+  const activeConds=m.conditions.length;
+  const hdrLabel=S.baseMode==="daytime"?"🌞 日帰り":"🌙 泊まり";
+  const condLabel=activeConds>0?` ＋${activeConds}条件`:"";
+  document.getElementById("header").innerHTML=`
+    <div class="top-row">
+      <div><div class="eyebrow">✈️ TRAVEL CHECKLIST</div><h1>旅の準備リスト</h1></div>
+      <div class="hdr-right">
+        <span id="sync-badge"></span>
+        <svg width="50" height="50" viewBox="0 0 64 64">
+          <circle cx="32" cy="32" r="${R}" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="5"/>
+          <circle cx="32" cy="32" r="${R}" fill="none" stroke="${pct===100?"#86EFAC":mode.color}" stroke-width="5" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${(parseFloat(C)*(1-pct/100)).toFixed(2)}" transform="rotate(-90 32 32)" style="transition:stroke-dashoffset .5s ease"/>
+          <text x="32" y="37" text-anchor="middle" font-size="13" font-weight="900" fill="#fff">${pct}%</text>
+        </svg>
+        <button id="reset-btn">🔄</button>
+      </div>
+    </div>
+    <button class="hdr-toggle-btn" id="hdr-toggle">
+      ${hdrLabel}${condLabel} &nbsp; ${done}/${total}個完了 &nbsp; <span class="arr${S.hdrOpen?" open":""}">▼</span>
+    </button>
+    <div class="hdr-collapsible${S.hdrOpen?" open":""}">
+      <div class="stats-row">
+        <span class="stat-num">${done}</span><span class="stat-sep">/</span>
+        <span class="stat-of">${total}</span><span class="stat-lbl">個完了</span>
+        ${pct===100?'<span class="done-chip">🎉 準備完了！</span>':""}
+      </div>
+      <div class="mode-row">
+        ${MODES.map(md=>{const on=S.baseMode===md.id;return`<button class="mode-pill" data-mode="${md.id}" style="background:${on?"rgba(255,255,255,.93)":"rgba(255,255,255,.1)"};color:${on?md.color:"rgba(255,255,255,.75)"};font-weight:${on?800:500}">${md.label}</button>`;}).join("")}
+      </div>
+      <div class="cond-row">
+        <span class="cond-lbl">＋条件</span>
+        ${CONDS.map(c=>{const on=m.conditions.includes(c.id);return`<button class="cond-chip" data-cond="${c.id}" style="background:${on?c.color:"rgba(255,255,255,.1)"};color:${on?"#fff":"rgba(255,255,255,.65)"};border-color:${on?c.color:"transparent"}">${c.label}</button>`;}).join("")}
+      </div>
+      <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${pct===100?"#86EFAC":"rgba(255,255,255,.85)"}"></div></div>
+    </div>
+    ${!S.hdrOpen?`<div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${pct===100?"#86EFAC":"rgba(255,255,255,.85)"}"></div></div>`:""}
+  `;
+  bdg();
+  const chk=`<svg width="10" height="8" viewBox="0 0 10 8"><polyline points="1,4 3.5,7 9,1" stroke="#fff" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  document.getElementById("main").innerHTML=vc.map((cat,ci)=>{
+    const catDone=cat.items.filter(i=>m.checked[i.id]).length;
+    const isOpen=m.openCats[cat.id]!==false;
+    const allOn=cat.items.length>0&&cat.items.every(i=>m.checked[i.id]);
+    return`<div class="card"><div class="cat-head" data-toggle="${cat.id}" style="border-left-color:${cat.color}"><div class="cat-l"><span class="dot" style="background:${cat.color}"></span><span class="cat-lbl">${cat.label}</span><span class="badge" style="background:${cat.color}28;color:${cat.color}">${catDone}/${cat.items.length}</span></div><div class="cat-r"><button class="cat-eb" data-cup="${cat.id}" ${ci===0?"disabled":""}>▲</button><button class="cat-eb" data-cdn="${cat.id}" ${ci===vc.length-1?"disabled":""}>▼</button><button class="cat-eb" data-ced="${cat.id}">✎</button><button class="all-btn" data-ca="${cat.id}">${allOn?"全解除":"全選択"}</button><span class="chev">${isOpen?"▲":"▼"}</span></div></div>${isOpen?`<ul class="item-list">${cat.items.map((it,idx)=>{const on=!!m.checked[it.id];const label=lb(it.id,it.label);const isDO=S.dragOv===it.id&&S.dragCat===cat.id;return`<li class="item${isDO?" drag-over":""}" draggable="true" data-iid="${it.id}" data-icid="${cat.id}"><span class="dh">⠿</span><span class="cb" data-chk="${it.id}" style="${on?`background:${cat.color};border-color:${cat.color};`:""}">${on?chk:""}</span><span class="il${on?" done":""}" data-chk="${it.id}" data-dbl="${it.id}" data-bl="${e(label)}">${label}</span><span class="ag"><button class="ib" data-edt="${it.id}" data-el="${e(label)}">✎</button><button class="ib" data-mu="${it.id}" data-mcid="${cat.id}" data-mi="${idx}" ${idx===0?"disabled":""}>▲</button><button class="ib" data-md="${it.id}" data-mcid="${cat.id}" data-mi="${idx}" ${idx===cat.items.length-1?"disabled":""}>▼</button><button class="ib del" data-del="${it.id}" data-dcid="${cat.id}">✕</button></span></li>`;}).join("")}${S.addingCat===cat.id?`<li class="ar"><input class="ai" data-acat="${cat.id}" placeholder="項目名を入力..." value="${e(S.addText)}"><button class="ac2" data-ac="${cat.id}" style="background:${cat.color}">追加</button><button class="ax" data-acc="${cat.id}">✕</button></li>`:`<li class="atr"><button class="atb" data-at="${cat.id}" style="color:${cat.color}">＋ 項目を追加</button></li>`}</ul>`:""}</div>`;
+  }).join("")+`<div class="add-cat-card" id="acc2"><button class="add-cat-btn">＋ カテゴリを追加</button></div>`;
+  document.getElementById("ms").innerHTML=
+    (S.showReset?`<div class="overlay" id="ov"><div class="modal"><div class="modal-icon">🔄</div><h2>リセットしますか？</h2><p>${mode.label}のチェックだけオフにします。<br><small style="color:#aaa">もう片方（${MODES.find(md=>md.id!==S.baseMode).label}）には影響しません</small></p><div class="modal-btns"><button class="mbtn cancel" id="mc">キャンセル</button><button class="mbtn confirm" id="mr" style="background:${mode.grad}">リセットする</button></div></div></div>`:"")
+    +(S.showEM?`<div class="overlay" id="eov"><div class="em"><h3>✎ 項目を編集</h3><input class="em-inp" id="emi" value="${e(S.emText)}" placeholder="項目名を入力..."><div class="em-btns"><button class="cancel" id="emc">キャンセル</button><button class="ok" id="emo">保存する</button></div></div></div>`:"")
+    +(S.showCM?`<div class="overlay" id="cov"><div class="cm"><h3>${S.cmNew?"➕ カテゴリを追加":"✎ カテゴリを編集"}</h3><div class="cm-row"><label>カテゴリ名</label><input class="cm-inp" id="cni" value="${e(S.cmName)}" placeholder="例：持ち物、メイクなど"></div><div class="cm-row"><label>絵文字</label><div class="eg">${EMOJIS.map(em=>`<button class="eo${S.cmEmoji===em?" sel":""}" data-em="${em}">${em}</button>`).join("")}</div></div><div class="cm-row"><label>カラー</label><div class="cg">${COLORS.map(col=>`<div class="co${S.cmColor===col?" sel":""}" data-col="${col}" style="background:${col}"></div>`).join("")}</div></div><div class="cm-btns">${!S.cmNew?`<button class="del" id="cmd">削除</button>`:""}<button class="cancel" id="cmc">キャンセル</button><button class="ok" id="cmo">保存する</button></div></div></div>`:"");
+  const q=s=>document.querySelectorAll(s);
+  q("[data-mode]").forEach(el=>el.onclick=()=>setMode(el.dataset.mode));
+  q("[data-cond]").forEach(el=>el.onclick=()=>toggleCond(el.dataset.cond));
+  const rb=document.getElementById("reset-btn");if(rb)rb.onclick=()=>{S.showReset=true;render();};
+  const ht=document.getElementById("hdr-toggle");if(ht)ht.onclick=()=>{S.hdrOpen=!S.hdrOpen;render();};
+  const mc=document.getElementById("mc");if(mc)mc.onclick=()=>{S.showReset=false;render();};
+  const mr=document.getElementById("mr");if(mr)mr.onclick=resetAll;
+  const ov=document.getElementById("ov");if(ov)ov.onclick=ev=>{if(ev.target===ov){S.showReset=false;render();}};
+  const eov=document.getElementById("eov");if(eov)eov.onclick=ev=>{if(ev.target===eov){S.showEM=false;render();}};
+  const emo=document.getElementById("emo");if(emo)emo.onclick=commitEM;
+  const emc=document.getElementById("emc");if(emc)emc.onclick=()=>{S.showEM=false;render();};
+  const emi=document.getElementById("emi");if(emi){emi.oninput=ev=>S.emText=ev.target.value;emi.onkeydown=ev=>{if(ev.key==="Enter")commitEM();if(ev.key==="Escape"){S.showEM=false;render();}};setTimeout(()=>emi.focus(),50);}
+  const cov=document.getElementById("cov");if(cov)cov.onclick=ev=>{if(ev.target===cov){S.showCM=false;render();}};
+  const cmo=document.getElementById("cmo");if(cmo)cmo.onclick=commitCM;
+  const cmc=document.getElementById("cmc");if(cmc)cmc.onclick=()=>{S.showCM=false;render();};
+  const cmd=document.getElementById("cmd");if(cmd)cmd.onclick=()=>{if(confirm("このカテゴリを削除しますか？"))delCat(S.cmId);};
+  const cni=document.getElementById("cni");if(cni){cni.oninput=ev=>S.cmName=ev.target.value;cni.onkeydown=ev=>{if(ev.key==="Enter")commitCM();if(ev.key==="Escape"){S.showCM=false;render();}};setTimeout(()=>cni.focus(),50);}
+  q(".eo").forEach(el=>el.onclick=()=>{S.cmEmoji=el.dataset.em;render();});
+  q(".co").forEach(el=>el.onclick=()=>{S.cmColor=el.dataset.col;render();});
+  q("[data-cup]").forEach(el=>el.onclick=ev=>{ev.stopPropagation();moveCat(el.dataset.cup,-1);});
+  q("[data-cdn]").forEach(el=>el.onclick=ev=>{ev.stopPropagation();moveCat(el.dataset.cdn,1);});
+  q("[data-ced]").forEach(el=>el.onclick=ev=>{ev.stopPropagation();openCM(el.dataset.ced);});
+  const acc2=document.getElementById("acc2");if(acc2)acc2.onclick=()=>openCM(null);
+  q("[data-toggle]").forEach(el=>el.onclick=ev=>{if(!ev.target.closest("[data-ca]")&&!ev.target.closest(".cat-eb"))toggleCat(el.dataset.toggle);});
+  q("[data-ca]").forEach(el=>el.onclick=ev=>{ev.stopPropagation();const c=vc.find(c=>c.id===el.dataset.ca);if(c)chkAll(c.id,c.items);});
+  q("[data-chk]").forEach(el=>el.onclick=()=>toggle(el.dataset.chk));
+  q("[data-dbl]").forEach(el=>el.ondblclick=()=>openEM(el.dataset.dbl,el.dataset.bl));
+  q("[data-edt]").forEach(el=>el.onclick=ev=>{ev.stopPropagation();openEM(el.dataset.edt,el.dataset.el);});
+  q("[data-mu]").forEach(el=>el.onclick=ev=>{ev.stopPropagation();const c=vc.find(c=>c.id===el.dataset.mcid);if(c)moveItem(c.id,c.items,+el.dataset.mi,+el.dataset.mi-1);});
+  q("[data-md]").forEach(el=>el.onclick=ev=>{ev.stopPropagation();const c=vc.find(c=>c.id===el.dataset.mcid);if(c)moveItem(c.id,c.items,+el.dataset.mi,+el.dataset.mi+1);});
+  q("[data-del]").forEach(el=>el.onclick=ev=>{ev.stopPropagation();delItem(el.dataset.del,el.dataset.dcid);});
+  q("[data-at]").forEach(el=>el.onclick=()=>{S.addingCat=el.dataset.at;S.addText="";render();});
+  q(".ai").forEach(inp=>{inp.oninput=ev=>S.addText=ev.target.value;inp.onkeydown=ev=>{if(ev.key==="Enter")addItem(inp.dataset.acat);if(ev.key==="Escape"){S.addingCat=null;S.addText="";render();}};});
+  q("[data-ac]").forEach(el=>el.onclick=()=>addItem(el.dataset.ac));
+  q("[data-acc]").forEach(el=>el.onclick=()=>{S.addingCat=null;S.addText="";render();});
+  q("li.item[draggable]").forEach(li=>{
+    li.ondragstart=ev=>{S.dragId=li.dataset.iid;S.dragCat=li.dataset.icid;ev.dataTransfer.effectAllowed="move";};
+    li.ondragover=ev=>{ev.preventDefault();if(S.dragOv!==li.dataset.iid){S.dragOv=li.dataset.iid;render();}};
+    li.ondragend=()=>{if(S.dragId&&S.dragOv&&S.dragId!==S.dragOv&&S.dragCat){const c=vc.find(c=>c.id===S.dragCat);if(c){const ids=c.items.map(i=>i.id);const fi=ids.indexOf(S.dragId),ti=ids.indexOf(S.dragOv);if(fi!==-1&&ti!==-1){const o=[...ids];const[mv]=o.splice(fi,1);o.splice(ti,0,mv);M().catOrder[S.dragCat]=o;}}}S.dragId=null;S.dragOv=null;S.dragCat=null;save();render();};
+  });
+  if(S.addingCat){const inp=document.querySelector(`.ai[data-acat="${S.addingCat}"]`);if(inp)inp.focus();}
+}
+init();
+</script>
+</body>
+</html>
