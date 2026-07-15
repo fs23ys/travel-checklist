@@ -350,6 +350,17 @@ function resetAll(){
   const sh=SH();condCats().forEach(cat=>cat.items.forEach(i=>{delete sh.condExtraItems[i.id];}));
   S.showReset=false;save();render();
 }
+function moveCat(catId,dir){const cats=allCats();const ids=cats.map(c=>c.id);const i=ids.indexOf(catId);const ni=i+dir;if(ni<0||ni>=ids.length)return;const[mv]=ids.splice(i,1);ids.splice(ni,0,mv);M().catListOrder=ids;save();render();}
+function openCM(catId){
+  const isNew=!catId;const cat=catId?allCats().find(c=>c.id===catId):null;
+  S.showCM=true;S.cmNew=isNew;S.cmId=catId||null;
+  const raw=cat?.label??"";
+  const em=raw.match(/^(\p{Emoji_Presentation}|\p{Emoji}\uFE0F)/u);
+  S.cmEmoji=em?em[0]:"📝";S.cmName=raw.replace(/^(\p{Emoji_Presentation}|\p{Emoji}\uFE0F)\s*/u,"").trim();S.cmColor=cat?.color??"#86EFAC";
+  render();
+}
+function commitCM(){const name=S.cmName.trim();if(!name)return;const fullLabel=S.cmEmoji+" "+name;const m=M();if(S.cmNew){const id="cat_"+Date.now();m.customCats.push({id,label:fullLabel,color:S.cmColor,items:[]});m.openCats[id]=true;}else{m.customLabels["_cat_"+S.cmId]=fullLabel;m.customLabels["_col_"+S.cmId]=S.cmColor;}S.showCM=false;save();render();}
+function delCat(catId){const m=M();if(!m.deletedCatIds.includes(catId))m.deletedCatIds.push(catId);m.customCats=m.customCats.filter(c=>c.id!==catId);S.showCM=false;save();render();}
 function render(){
   const vc=visCats();const m=M();
   const allIds=vc.flatMap(c=>c.items.map(i=>i.id));
@@ -358,7 +369,7 @@ function render(){
   const mode=MODES.find(md=>md.id===S.baseMode)||MODES[0];
   const R=26,C=(2*Math.PI*R).toFixed(2);
   document.getElementById("header").style.background=mode.grad;
-  const activeConds=m.conditions.length;
+  const activeConds=SH().conditions.length;
   const hdrLabel=S.baseMode==="daytime"?"🌞 日帰り":"🌙 泊まり";
   const condLabel=activeConds>0?` ＋${activeConds}条件`:"";
   document.getElementById("header").innerHTML=`
@@ -415,7 +426,7 @@ function render(){
   q("[data-cond]").forEach(el=>el.onclick=()=>toggleCond(el.dataset.cond));
   // cond add/delete
   const cab=document.getElementById("cond-add-btn");if(cab)cab.onclick=()=>{S.condModal={name:"",color:"#86EFAC"};render();};
-  q("[data-conddel]").forEach(el=>el.onclick=ev=>{ev.stopPropagation();const cid=el.dataset.conddel;S.customConds=S.customConds.filter(c=>c.id!==cid);const m=M();m.conditions=m.conditions.filter(id=>id!==cid);save();render();});
+  q("[data-conddel]").forEach(el=>el.onclick=ev=>{ev.stopPropagation();const cid=el.dataset.conddel;const sh=SH();sh.customConds=sh.customConds.filter(c=>c.id!==cid);sh.conditions=sh.conditions.filter(id=>id!==cid);save();render();});
   // condModal
   const cdov=document.getElementById("cdov");if(cdov)cdov.onclick=ev=>{if(ev.target===cdov){S.condModal=null;render();}};
   const cdok=document.getElementById("cd-ok");if(cdok)cdok.onclick=()=>{const name=(document.getElementById("cd-name")?.value||"").trim();if(!name)return;const id="cond_"+Date.now();SH().customConds.push({id,label:"🏷️ "+name,color:S.condModal.color||"#86EFAC"});S.condModal=null;save();render();};
