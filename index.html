@@ -5,10 +5,33 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>旅の準備チェックリスト</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✈️</text></svg>">
-  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%238B5CF6'/><text y='.85em' font-size='72' x='12'>✈️</text></svg>">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="旅の準備">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <script>
+    // ホーム画面アイコンをCanvasで生成
+    window.addEventListener("DOMContentLoaded",()=>{
+      const c=document.createElement("canvas");
+      c.width=180;c.height=180;
+      const ctx=c.getContext("2d");
+      // 背景（紫グラデ）
+      const g=ctx.createLinearGradient(0,0,180,180);
+      g.addColorStop(0,"#4C1D95");g.addColorStop(1,"#8B5CF6");
+      ctx.fillStyle=g;
+      ctx.roundRect(0,0,180,180,36);
+      ctx.fill();
+      // 絵文字
+      ctx.font="110px serif";
+      ctx.textAlign="center";
+      ctx.textBaseline="middle";
+      ctx.fillText("✈️",90,95);
+      // linkタグに設定
+      const link=document.createElement("link");
+      link.rel="apple-touch-icon";
+      link.href=c.toDataURL("image/png");
+      document.head.appendChild(link);
+    });
+  </script>
   <style>
     *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
     body{font-family:'Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif;background:#F5F3EE;min-height:100vh;padding-bottom:80px}
