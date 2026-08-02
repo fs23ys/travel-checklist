@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>旅の準備チェックリスト</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✈️</text></svg>">
   <style>
     *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
     body{font-family:'Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif;background:#F5F3EE;min-height:100vh;padding-bottom:80px}
@@ -234,7 +235,12 @@ function save(){
         setDoc(REFS.conds,{conditions:sh.conditions,condExtraItems:sh.condExtraItems,condDeletedIds:sh.condDeletedIds,condCustomLabels:sh.condCustomLabels,condCatOrder:sh.condCatOrder,customConds:sh.customConds}),
       ]);
       S.syncStatus="saved";bdg();setTimeout(()=>{S.syncStatus="idle";bdg();},2000);
-    }catch(e){console.error(e);S.syncStatus="error";bdg();}finally{isSaving=false;}
+    }catch(e){
+      console.error(e);S.syncStatus="error";bdg();
+      // 保存エラーの詳細をバッジに表示
+      const el=document.getElementById("sync-badge");
+      if(el){el.textContent="❌ "+(e?.code||e?.message||"保存エラー");el.className="error";el.title=String(e);}
+    }finally{isSaving=false;}
   },800);
 }
 function bdg(){const el=document.getElementById("sync-badge");if(!el)return;const mp={loading:["⏳ 読込中",""],saving:["🔄 同期中","saving"],saved:["✅ 同期済","saved"],error:["❌ エラー","error"],idle:["☁️ 同期済",""]};const[t,c]=mp[S.syncStatus]||["",""];el.textContent=t;el.className=c;}
@@ -248,11 +254,15 @@ async function init(){
     S.syncStatus="idle";ld.style.display="none";document.getElementById("app").style.display="block";render();
     ["daytime","overnight"].forEach(mode=>{onSnapshot(REFS[mode],snap=>{if(isSaving||!snap.exists())return;applyData(mode,snap.data());if(mode===S.baseMode)render();},e=>console.error(e));});
     onSnapshot(REFS.conds,snap=>{if(isSaving||!snap.exists())return;applyShared(snap.data());render();},e=>console.error(e));
-  }catch(e){
-    console.error(e);S.syncStatus="error";
-    ld.innerHTML='<div class="ld-error">⚠️ Firebaseへの接続に失敗しました。<br><br>① Firestore Databaseを作成する<br>② ルールの有効期限を確認する</div><button id="ob" style="padding:10px 24px;border-radius:9px;border:none;background:#8B5CF6;color:#fff;font-size:14px;font-weight:700;cursor:pointer;margin-top:10px">オフラインで使う</button>';
-    document.getElementById("ob").onclick=()=>{ld.style.display="none";document.getElementById("app").style.display="block";render();};
-  }
+    }catch(e){
+      console.error(e);S.syncStatus="error";bdg();
+      // エラー詳細を画面に表示
+      const errMsg=e?.code||e?.message||String(e);
+      const ld=document.getElementById("loading");
+      ld.style.display="flex";
+      ld.innerHTML=`<div class="ld-error">⚠️ Firebase接続エラー<br><br><b style="font-size:11px;word-break:break-all">${errMsg}</b></div><button id="ob" style="padding:10px 24px;border-radius:9px;border:none;background:#8B5CF6;color:#fff;font-size:14px;font-weight:700;cursor:pointer;margin-top:10px">オフラインで使う</button>`;
+      document.getElementById("ob").onclick=()=>{ld.style.display="none";document.getElementById("app").style.display="block";render();};
+    }
 }
 function e(s=""){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
 function lb(id,base){return M().customLabels[id]??base;}
