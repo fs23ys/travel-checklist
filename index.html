@@ -317,16 +317,30 @@ function visCats(){
   }).filter(Boolean);
 }
 function toggle(id,isCondCat){
-  if(isCondCat){const sh=SH();sh.condExtraItems[id]=sh.condExtraItems[id]?undefined:true;}
-  else{M().checked[id]=!M().checked[id];}
+  if(isCondCat){
+    const sh=SH();
+    if(sh.condExtraItems[id]){
+      delete sh.condExtraItems[id];
+    } else {
+      sh.condExtraItems[id]=true;
+    }
+  } else {
+    M().checked[id]=!M().checked[id];
+  }
   save();render();
 }
-function toggleCat(id){M().openCats[id]=!M().openCats[id];save();render();}
-function setMode(mode){S.baseMode=mode;S.addingCat=null;render();}
-function toggleCond(id){const sh=SH();const i=sh.conditions.indexOf(id);i>=0?sh.conditions.splice(i,1):sh.conditions.push(id);save();render();}
 function chkAll(catId,items,isCondCat){
-  if(isCondCat){const sh=SH();const allOn=items.every(i=>sh.condExtraItems[i.id]);items.forEach(i=>sh.condExtraItems[i.id]=allOn?undefined:true);}
-  else{const on=items.every(i=>M().checked[i.id]);items.forEach(i=>M().checked[i.id]=!on);}
+  if(isCondCat){
+    const sh=SH();
+    const allOn=items.every(i=>sh.condExtraItems[i.id]);
+    items.forEach(i=>{
+      if(allOn){ delete sh.condExtraItems[i.id]; }
+      else { sh.condExtraItems[i.id]=true; }
+    });
+  } else {
+    const on=items.every(i=>M().checked[i.id]);
+    items.forEach(i=>M().checked[i.id]=!on);
+  }
   save();render();
 }
 function addItem(catId,isCondCat){
@@ -360,7 +374,6 @@ function moveItem(catId,items,from,to){
 }
 function resetAll(){
   const c={};visCats().forEach(cat=>cat.items.forEach(i=>c[i.id]=false));M().checked=c;
-  // also clear cond checks
   const sh=SH();condCats().forEach(cat=>cat.items.forEach(i=>{delete sh.condExtraItems[i.id];}));
   S.showReset=false;save();render();
 }
