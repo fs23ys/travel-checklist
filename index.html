@@ -228,6 +228,8 @@ function applyShared(d){
   sh.customConds=d.customConds||[];
   S.customConds=sh.customConds; // keep alias
 }
+// Firebaseはundefinedを拒否するので、保存前に取り除く
+function clean(o){return JSON.parse(JSON.stringify(o));}
 function save(){
   S.syncStatus="saving";bdg();clearTimeout(saveTimer);
   saveTimer=setTimeout(async()=>{
@@ -235,8 +237,8 @@ function save(){
     try{
       const m=M();const sh=SH();
       await Promise.all([
-        setDoc(REFS[S.baseMode],{checked:m.checked,extraItems:m.extraItems,deletedIds:m.deletedIds,customLabels:m.customLabels,catOrder:m.catOrder,openCats:m.openCats,customCats:m.customCats,deletedCatIds:m.deletedCatIds,catListOrder:m.catListOrder}),
-        setDoc(REFS.conds,{conditions:sh.conditions,condExtraItems:sh.condExtraItems,condDeletedIds:sh.condDeletedIds,condCustomLabels:sh.condCustomLabels,condCatOrder:sh.condCatOrder,customConds:sh.customConds}),
+        setDoc(REFS[S.baseMode],clean({checked:m.checked,extraItems:m.extraItems,deletedIds:m.deletedIds,customLabels:m.customLabels,catOrder:m.catOrder,openCats:m.openCats,customCats:m.customCats,deletedCatIds:m.deletedCatIds,catListOrder:m.catListOrder})),
+        setDoc(REFS.conds,clean({conditions:sh.conditions,condExtraItems:sh.condExtraItems,condDeletedIds:sh.condDeletedIds,condCustomLabels:sh.condCustomLabels,condCatOrder:sh.condCatOrder,customConds:sh.customConds})),
       ]);
       S.syncStatus="saved";bdg();setTimeout(()=>{S.syncStatus="idle";bdg();},2000);
     }catch(e){
@@ -315,6 +317,15 @@ function visCats(){
     if(!items.length&&!cat.isCustom)return null;
     return{...cat,items};
   }).filter(Boolean);
+}
+function toggleCond(cid){
+  const sh=SH();
+  if(sh.conditions.includes(cid)){
+    sh.conditions=sh.conditions.filter(x=>x!==cid);
+  } else {
+    sh.conditions=[...sh.conditions,cid];
+  }
+  save();render();
 }
 function toggle(id,isCondCat){
   if(isCondCat){
@@ -492,7 +503,6 @@ function render(){
   q(".ai").forEach(inp=>{inp.oninput=ev=>S.addText=ev.target.value;inp.onkeydown=ev=>{if(ev.key==="Enter")addItem(inp.dataset.acat,inp.dataset.acc2==="1");if(ev.key==="Escape"){S.addingCat=null;S.addText="";render();}};});
   q("[data-ac]").forEach(el=>el.onclick=()=>addItem(el.dataset.ac,el.dataset.acc2==="1"));
   q("[data-acc]").forEach(el=>el.onclick=()=>{S.addingCat=null;S.addText="";render();});
-  q("[data-conddel]").forEach(el=>el.onclick=ev=>{ev.stopPropagation();const cid=el.dataset.conddel;const sh=SH();sh.customConds=sh.customConds.filter(c=>c.id!==cid);sh.conditions=sh.conditions.filter(id=>id!==cid);save();render();});
   q("li.item[draggable]").forEach(li=>{
     li.ondragstart=ev=>{S.dragId=li.dataset.iid;S.dragCat=li.dataset.icid;ev.dataTransfer.effectAllowed="move";};
     li.ondragover=ev=>{ev.preventDefault();if(S.dragOv!==li.dataset.iid){S.dragOv=li.dataset.iid;render();}};
