@@ -206,6 +206,8 @@ function emptyMode(){return{checked:{},extraItems:{},deletedIds:[],customLabels:
 // 共通データ（条件選択・条件カテゴリ編集は日帰り/泊まりで共有）
 function emptyShared(){return{conditions:[],condExtraItems:{},condDeletedIds:[],condCustomLabels:{},condCatOrder:{},customConds:[]};}
 const S={baseMode:"daytime",modes:{daytime:emptyMode(),overnight:emptyMode()},shared:emptyShared(),hdrOpen:false,addingCat:null,addText:"",showReset:false,showEM:false,emId:null,emText:"",showCM:false,cmId:null,cmName:"",cmEmoji:"📝",cmColor:"#86EFAC",cmNew:false,condModal:null,syncStatus:"loading",dragId:null,dragOv:null,dragCat:null};
+// 最後に選んだ日帰り/泊まりを覚えておく（この端末だけ）
+try{const v=localStorage.getItem("baseMode");if(v==="daytime"||v==="overnight")S.baseMode=v;}catch(_){}
 function M(){return S.modes[S.baseMode];}
 function SH(){return S.shared;}
 let saveTimer=null,isSaving=false;
@@ -230,9 +232,15 @@ function applyShared(d){
 }
 // Firebaseはundefinedを拒否するので、保存前に取り除く
 function clean(o){return JSON.parse(JSON.stringify(o));}
+// アプリを閉じる・裏に回すときは、待たずにすぐ保存する
+let savePending=null;
+function flushSave(){if(savePending){clearTimeout(saveTimer);const f=savePending;savePending=null;f();}}
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden")flushSave();});
+window.addEventListener("pagehide",flushSave);
 function save(){
   S.syncStatus="saving";bdg();clearTimeout(saveTimer);
-  saveTimer=setTimeout(async()=>{
+  savePending=async()=>{
+    savePending=null;
     isSaving=true;
     try{
       const m=M();const sh=SH();
@@ -247,7 +255,8 @@ function save(){
       const el=document.getElementById("sync-badge");
       if(el){el.textContent="❌ "+(e?.code||e?.message||"保存エラー");el.className="error";el.title=String(e);}
     }finally{isSaving=false;}
-  },800);
+  };
+  saveTimer=setTimeout(()=>{if(savePending)savePending();},800);
 }
 function bdg(){const el=document.getElementById("sync-badge");if(!el)return;const mp={loading:["⏳ 読込中",""],saving:["🔄 同期中","saving"],saved:["✅ 同期済","saved"],error:["❌ エラー","error"],idle:["☁️ 同期済",""]};const[t,c]=mp[S.syncStatus]||["",""];el.textContent=t;el.className=c;}
 async function init(){
@@ -318,7 +327,7 @@ function visCats(){
     return{...cat,items};
   }).filter(Boolean);
 }
-function setMode(mode){S.baseMode=mode;S.addingCat=null;render();}
+function setMode(mode){flushSave();S.baseMode=mode;S.addingCat=null;try{localStorage.setItem("baseMode",mode);}catch(_){}render();}
 function toggleCat(id){const m=M();m.openCats[id]=(m.openCats[id]===false);save();render();}
 function toggleCond(cid){
   const sh=SH();
