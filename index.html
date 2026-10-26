@@ -206,7 +206,7 @@ function emptyMode(){return{checked:{},extraItems:{},deletedIds:[],customLabels:
 // 共通データ（条件選択・条件カテゴリ編集は日帰り/泊まりで共有）
 function emptyShared(){return{conditions:[],condExtraItems:{},condDeletedIds:[],condCustomLabels:{},condCatOrder:{},customConds:[]};}
 const S={baseMode:"daytime",modes:{daytime:emptyMode(),overnight:emptyMode()},shared:emptyShared(),hdrOpen:false,addingCat:null,addText:"",showReset:false,showEM:false,emId:null,emText:"",showCM:false,cmId:null,cmName:"",cmEmoji:"📝",cmColor:"#86EFAC",cmNew:false,condModal:null,syncStatus:"loading",dragId:null,dragOv:null,dragCat:null};
-// 最後に選んだ日帰り/泊まりを覚えておく（この端末だけ）
+// 最後に選んだ日帰り/泊まり：開くときはFirebaseの値を優先、オフライン時はこの端末の記憶を使う
 try{const v=localStorage.getItem("baseMode");if(v==="daytime"||v==="overnight")S.baseMode=v;}catch(_){}
 function M(){return S.modes[S.baseMode];}
 function SH(){return S.shared;}
@@ -246,7 +246,7 @@ function save(){
       const m=M();const sh=SH();
       await Promise.all([
         setDoc(REFS[S.baseMode],clean({checked:m.checked,extraItems:m.extraItems,deletedIds:m.deletedIds,customLabels:m.customLabels,catOrder:m.catOrder,openCats:m.openCats,customCats:m.customCats,deletedCatIds:m.deletedCatIds,catListOrder:m.catListOrder})),
-        setDoc(REFS.conds,clean({conditions:sh.conditions,condExtraItems:sh.condExtraItems,condDeletedIds:sh.condDeletedIds,condCustomLabels:sh.condCustomLabels,condCatOrder:sh.condCatOrder,customConds:sh.customConds})),
+        setDoc(REFS.conds,clean({lastMode:S.baseMode,conditions:sh.conditions,condExtraItems:sh.condExtraItems,condDeletedIds:sh.condDeletedIds,condCustomLabels:sh.condCustomLabels,condCatOrder:sh.condCatOrder,customConds:sh.customConds})),
       ]);
       S.syncStatus="saved";bdg();setTimeout(()=>{S.syncStatus="idle";bdg();},2000);
     }catch(e){
@@ -265,7 +265,7 @@ async function init(){
     const[sd,so,sc]=await Promise.all([getDoc(REFS.daytime),getDoc(REFS.overnight),getDoc(REFS.conds)]);
     if(sd.exists())applyData("daytime",sd.data());
     if(so.exists())applyData("overnight",so.data());
-    if(sc.exists())applyShared(sc.data());
+    if(sc.exists()){applyShared(sc.data());const lm=sc.data().lastMode;if(lm==="daytime"||lm==="overnight")S.baseMode=lm;}
     S.syncStatus="idle";ld.style.display="none";document.getElementById("app").style.display="block";render();
     ["daytime","overnight"].forEach(mode=>{onSnapshot(REFS[mode],snap=>{if(isSaving||!snap.exists())return;applyData(mode,snap.data());if(mode===S.baseMode)render();},e=>console.error(e));});
     onSnapshot(REFS.conds,snap=>{if(isSaving||!snap.exists())return;applyShared(snap.data());render();},e=>console.error(e));
@@ -327,7 +327,7 @@ function visCats(){
     return{...cat,items};
   }).filter(Boolean);
 }
-function setMode(mode){flushSave();S.baseMode=mode;S.addingCat=null;try{localStorage.setItem("baseMode",mode);}catch(_){}render();}
+function setMode(mode){if(mode===S.baseMode)return;flushSave();S.baseMode=mode;S.addingCat=null;try{localStorage.setItem("baseMode",mode);}catch(_){}save();render();}
 function toggleCat(id){const m=M();m.openCats[id]=(m.openCats[id]===false);save();render();}
 function toggleCond(cid){
   const sh=SH();
