@@ -318,6 +318,8 @@ function visCats(){
     return{...cat,items};
   }).filter(Boolean);
 }
+function setMode(mode){S.baseMode=mode;S.addingCat=null;render();}
+function toggleCat(id){const m=M();m.openCats[id]=(m.openCats[id]===false);save();render();}
 function toggleCond(cid){
   const sh=SH();
   if(sh.conditions.includes(cid)){
